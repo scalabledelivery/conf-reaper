@@ -48,28 +48,7 @@ function reap_pod(){
     kube_api "/api/v1/namespaces/${NAMESPACE}/pods/${POD_NAME}" -X DELETE > /dev/null
 }
 
-function watch_secrets(){
-    kube_api /api/v1/watch/secrets \
-        | jq -r --unbuffered '
-            . | select(.type == "MODIFIED")'
-    #| jq -r --unbuffered '
-    #    . 
-    #    | select(.type == "MODIFIED")'
-    #    $| .object.metadata.namespace + " " + .object.metadata.name
-    #| while read -r line; do pod_search_secrets $line; done
-}
-
-function watch_configmaps(){
-    kube_api /api/v1/watch/configmaps \
-    | jq -r --unbuffered '
-        . 
-        | select(.type == "MODIFIED")
-        | .object.metadata.namespace + " " + .object.metadata.name' \
-    | while read -r line; do pod_search_configmaps $line; done
-}
-
-
-
+# let the plumbing begin...
 curl --parallel --silent --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt --header "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
 https://kubernetes.default.svc.cluster.local/api/v1/watch/{configmaps,secrets} \
 | jq -r --unbuffered '
