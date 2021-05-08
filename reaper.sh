@@ -1,6 +1,8 @@
 #!/bin/bash
+set -e
+
 function kube_api(){
-    curl -s --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt --header "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" https://kubernetes.default.svc.cluster.local${@}
+    curl --parallel --silent --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt --header "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" https://kubernetes.default.svc.cluster.local${@}
 }
 
 function process_entry(){
@@ -49,8 +51,7 @@ function reap_pod(){
 }
 
 # let the plumbing begin...
-curl --parallel --silent --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt --header "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
-https://kubernetes.default.svc.cluster.local/api/v1/watch/{configmaps,secrets} \
+kube_api https://kubernetes.default.svc.cluster.local/api/v1/watch/{configmaps,secrets} \
 | jq -r --unbuffered '
     . 
     | select(.type == "MODIFIED")
