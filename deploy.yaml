@@ -1,0 +1,61 @@
+---
+# service account for running the reaper
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: conf-reaper
+  namespace: kube-system
+automountServiceAccountToken: true
+
+---
+# minimal permissions required for running pod-reaper at cluster level
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: conf-reaper
+  namespace: kube-system
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["list", "delete"]
+- apiGroups: [""]
+  resources: ["configmaps", "secrets"]
+  verbs: ["watch"]
+
+---
+# binding the above cluster role (permissions) to the above service account
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: conf-reaper-binding
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: conf-reaper
+subjects:
+- kind: ServiceAccount
+  name: conf-reaper
+  namespace: kube-system
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: conf-reaper
+  namespace: kube-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: conf-reaper
+  template:
+    metadata:
+      labels:
+        name: conf-reaper
+    spec:
+      serviceAccountName: conf-reaper
+      automountServiceAccountToken: true
+      containers:
+      - image: scalabledelivery/conf-reaper:latest
+        name: conf-reaper

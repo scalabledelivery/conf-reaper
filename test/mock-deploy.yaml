@@ -1,0 +1,95 @@
+---
+apiVersion: v1
+data:
+  file.txt: |
+      SUPERSAFE
+kind: ConfigMap
+metadata:
+  name: delete-this-cmap
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: delete-this-secret
+stringData:
+  secret.txt: SUPERSAFE
+EOF
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: delete-this-deployment-mnt
+  labels:
+    app: delete-this-deployment-mnt
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: delete-this-deployment-mnt
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: delete-this-deployment-mnt
+      annotations:
+        configMapModifyPolicy: "DELETE"
+        secretModifyPolicy: "DELETE"
+    spec:
+      volumes:
+      - secret:
+          secretName: delete-this-secret
+          defaultMode: 0400
+        name: secret
+      - configMap:
+          defaultMode: 420
+          name: delete-this-cmap
+        name: config
+      containers:
+      - image: nginx
+        name: delete-this-deployment-mnt
+        imagePullPolicy: "Always"
+        volumeMounts:
+        - mountPath: /var/www/html/file.txt
+          name: config
+          subPath: file.txt
+        resources: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: delete-this-deployment-env
+  labels:
+    app: delete-this-deployment-env
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: delete-this-deployment-env
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: delete-this-deployment-env
+      annotations:
+        configMapModifyPolicy: "DELETE"
+        secretModifyPolicy: "DELETE"
+    spec:
+      containers:
+      - image: nginx
+        name: delete-this-deployment-env
+        imagePullPolicy: "Always"
+        env:
+          - name: SOME_ENV_WITH_FILETXT
+            valueFrom:
+              configMapKeyRef:
+                name: delete-this-cmap
+                key: file.txt
+          - name: SOME_ENV_WITH_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: delete-this-secret
+                key: secret.txt
